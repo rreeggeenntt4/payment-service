@@ -40,4 +40,79 @@ NB: в задании можно не добавлять реальное хра
 
 ### Решение:
 
+Установка
+```sh
+symfony new payment-service --webapp
+cd payment-service
+symfony server:start
+```
+```
+[OK] Web server listening on https://127.0.0.1:8000
+```
+
+Установка зависимостей
+```sh
+composer require symfony/messenger symfony/serializer symfony/translation guzzlehttp/guzzle
+```
+messenger – обработка очередей. <br />
+serializer – работа с JSON.<br />
+translation – мультиязычность.<br />
+guzzlehttp/guzzle – HTTP-запросы к Telegram API.<br />
+
+## Cоздадим PaymentController, который будет принимать платежи
+```sh
+php bin/console make:controller PaymentController
+```
+```
+src\Controller\PaymentController.php
+```
+
+Что делает этот код?<br />
+Принимает POST /payment с JSON-данными.<br />
+Проверяет, что JSON корректный.<br />
+Передаёт данные в PaymentProcessor.<br />
+Возвращает JSON-ответ.<br />
+
+## Создадим сервис PaymentProcessor <br />
+```
+src/Service/PaymentProcessor.php
+```
+
+Что делает этот код?<br />
+Логирует платеж.<br />
+Проверяет user_id.<br />
+Определяет, новая подписка или продление.<br />
+Возвращает ответ.<br />
+
+## Проверка работы API
+```sh
+symfony server:start
+```
+
+Протестируем запросом powershell
+```powershell
+Invoke-WebRequest -Uri "http://127.0.0.1:8000/payment" `
+  -Method Post `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"token": "123e4567-e89b-12d3-a456-426614174000", "status": "confirmed", "order_id": 1234567890, "amount": 20000, "currency": "RUB", "error_code": null, "pan": "12341********234", "user_id": "876123654", "language_code": "ru"}'
+```
+Ответ
+```sh
+StatusCode        : 200
+StatusDescription : OK
+Content           : {"message":"New subscription processed","status":"confirmed"}
+RawContent        : HTTP/1.1 200 OK
+                    Cache-Control: no-cache, private
+                    Content-Type: application/json
+                    Date: Fri, 28 Feb 2025 17:27:30 GMT
+                    Set-Cookie: main_deauth_profile_token=d59ad4; path=/; httponly; samesite=lax,mai...
+Forms             : {}
+Headers           : {[Cache-Control, no-cache, private], [Content-Type, application/json], [Date, Fri, 28 Feb 2025 17:27:30 GMT], [Set-Cookie, main_deauth_profile_token=d59ad4; path=/; httponly; samesite=lax,main_auth_pro
+                    file_token=deleted; expires=Thu, 29 Feb 2024 17:27:29 GMT; Max-Age=0; path=/; httponly]...}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : System.__ComObject
+RawContentLength  : 61
+```
 

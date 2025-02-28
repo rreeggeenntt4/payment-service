@@ -2,13 +2,15 @@
 
 namespace App\Service;
 
+use App\Message\SendTelegramNotification;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Psr\Log\LoggerInterface;
 
 class PaymentProcessor
 {
     public function __construct(
         private LoggerInterface $logger,
-        private TelegramNotifier $telegramNotifier
+        private MessageBusInterface $messageBus
     ) {}
 
     public function handlePayment(array $data): array
@@ -24,12 +26,10 @@ class PaymentProcessor
         }
 
         $isNewSubscription = $this->isNewSubscription($userId);
-
-        // Формируем сообщение
         $message = $this->formatMessage($status, $isNewSubscription, $language);
 
-        // Отправляем сообщение в Telegram
-        $this->telegramNotifier->sendMessage($userId, $message);
+        // Отправляем сообщение в очередь
+        $this->messageBus->dispatch(new SendTelegramNotification($userId, $message));
 
         return [
             'message' => $isNewSubscription ? 'New subscription processed' : 'Subscription renewed',
@@ -39,7 +39,7 @@ class PaymentProcessor
 
     private function isNewSubscription(string $userId): bool
     {
-        return rand(0, 1) === 1; // Заглушка для проверки подписки
+        return rand(0, 1) === 1;
     }
 
     private function formatMessage(string $status, bool $isNew, string $lang): string

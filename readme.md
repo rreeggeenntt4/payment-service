@@ -155,3 +155,87 @@ message              status
 Subscription renewed confirmed
 ```
 
+## 3. Установка Symfony Messenger
+Symfony Messenger позволит:
+Обрабатывать уведомления асинхронно, не задерживая ответ на API-запрос. <br />
+Учитывать ограничения Telegram API (не более 10 запросов в секунду). <br />
+Обрабатывать высокую нагрузку (пики платежей). <br />
+
+Установим Messenger с поддержкой очередей:
+```
+composer require symfony/messenger
+```
+
+Symfony Messenger может работать с разными очередями:<br />
+Doctrine (БД) – просто.
+Установим:
+```
+composer require symfony/doctrine-messenger
+```
+Включим в .env поддержку Doctrine:
+```
+MESSENGER_TRANSPORT_DSN=doctrine://default
+```
+
+Подключим sqlite, отредактируем .env
+```
+DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"
+```
+Обновим схему БД:
+```
+php bin/console doctrine:migrations:diff
+php bin/console doctrine:migrations:migrate
+```
+
+Создание сообщения для отправки уведомлений
+Добавим класс Message, этот класс просто хранит данные для обработки в очереди:
+```
+src/Message/SendTelegramNotification.php
+```
+
+Создание обработчика сообщений (Message Handler)<br />
+Добавим Handler, этот класс обрабатывает сообщения из очереди и отправляет уведомление:<br />
+```
+src/MessageHandler/SendTelegramNotificationHandler.php
+```
+
+Изменение PaymentProcessor для работы с очередью. Теперь мы не отправляем уведомления сразу, а ставим их в очередь.
+```
+src/Service/PaymentProcessor.php
+```
+
+Конфигурация Symfony Messenger
+В файле config/packages/messenger.yaml добавим настройки транспорта:
+```
+framework:
+    messenger:
+        failure_transport: failed
+
+        transports:
+            async: doctrine://default
+            failed: doctrine://default?queue_name=failed
+
+        default_bus: messenger.bus.default
+
+        buses:
+            messenger.bus.default: ~
+
+        routing:
+            App\Message\SendTelegramNotification: async
+
+```
+async: doctrine://default — Основная очередь сообщений в базе данных (Doctrine).<br />
+failed: doctrine://default?queue_name=failed — Очередь для неудачных сообщений.<br />
+default_bus: messenger.bus.default — Основная шина сообщений.<br />
+buses: messenger.bus.default — Объявление шины (без лишних параметров).<br />
+routing: App\Message\SendTelegramNotification: async — Указано, что наши сообщения SendTelegramNotification попадут в очередь.
+
+Создаем таблицы для очередей в базе данных:
+```
+php bin/console messenger:setup-transports
+```
+
+Запусr обработчика очереди (чтобы сообщения реально отправлялись):
+```
+php bin/console messenger:consume async --limit=10 --time-limit=60 --memory-limit=128M
+```

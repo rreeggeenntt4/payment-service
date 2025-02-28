@@ -235,7 +235,39 @@ routing: App\Message\SendTelegramNotification: async — Указано, что 
 php bin/console messenger:setup-transports
 ```
 
-Запусr обработчика очереди (чтобы сообщения реально отправлялись):
+Запуск обработчика очереди (чтобы сообщения реально отправлялись):
 ```
 php bin/console messenger:consume async --limit=10 --time-limit=60 --memory-limit=128M
+```
+
+
+## tests
+```
+php bin/console messenger:stats
+```
+
+```
+php bin/console messenger:consume async --limit=10
+```
+
+postman  http://127.0.0.1:8000/payment    raw
+```
+{
+    "token": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "confirmed",
+    "order_id": 1234567890,
+    "amount": 20000,
+    "currency": "RUB",
+    "error_code": null,
+    "pan": "12341********234",
+    "user_id": "876123654",
+    "language_code": "ru"
+}
+```
+powershell
+```
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/payment" `
+  -Method Post `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"token": "123e4567-e89b-12d3-a456-426614174000", "status": "confirmed", "order_id": 1234567890, "amount": 20000, "currency": "RUB", "error_code": null, "pan": "12341********234", "user_id": "876123654", "language_code": "ru"}'
 ```

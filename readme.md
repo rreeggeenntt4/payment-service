@@ -40,7 +40,7 @@ NB: в задании можно не добавлять реальное хра
 
 ### Решение:
 
-Установка
+## 1. Установка
 ```sh
 symfony new payment-service --webapp
 cd payment-service
@@ -59,7 +59,7 @@ serializer – работа с JSON.<br />
 translation – мультиязычность.<br />
 guzzlehttp/guzzle – HTTP-запросы к Telegram API.<br />
 
-## Cоздадим PaymentController, который будет принимать платежи
+### Cоздадим PaymentController, который будет принимать платежи
 ```sh
 php bin/console make:controller PaymentController
 ```
@@ -73,7 +73,7 @@ src\Controller\PaymentController.php
 Передаёт данные в PaymentProcessor.<br />
 Возвращает JSON-ответ.<br />
 
-## Создадим сервис PaymentProcessor <br />
+### Создадим сервис PaymentProcessor <br />
 ```
 src/Service/PaymentProcessor.php
 ```
@@ -84,7 +84,7 @@ src/Service/PaymentProcessor.php
 Определяет, новая подписка или продление.<br />
 Возвращает ответ.<br />
 
-## Проверка работы API
+### Проверка работы API
 ```sh
 symfony server:start
 ```
@@ -114,5 +114,44 @@ InputFields       : {}
 Links             : {}
 ParsedHtml        : System.__ComObject
 RawContentLength  : 61
+```
+
+## 2. Добавление Telegram-уведомлений
+### Установка HTTP-клиента для отправки запросов
+Symfony использует HttpClient для работы с внешними API. Установим его:
+```sh
+composer require symfony/http-client
+```
+### Создадим сервис TelegramNotifier, который будет формировать и отправлять сообщения.
+```
+src/Service/TelegramNotifier.php
+```
+Что делает этот код?<br />
+Использует HttpClientInterface для отправки запросов в Telegram API.<br />
+Логирует успешную отправку или ошибки.<br />
+Форматирует сообщение в MarkdownV2.<br />
+
+### Внедрение TelegramNotifier в PaymentProcessor
+```sh
+src/Service/PaymentProcessor.php отредактируем код
+```
+Что изменилось?<br />
+Теперь при обработке платежа отправляется сообщение в Telegram.<br />
+Форматируется текст в зависимости от статуса и языка.<br />
+
+### Проверка работы Telegram-уведомлений
+POST-запрос через PowerShell:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/payment" `
+  -Method Post `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"token": "123e4567-e89b-12d3-a456-426614174000", "status": "confirmed", "order_id": 1234567890, "amount": 20000, "currency": "RUB", "error_code": null, "pan": "12341********234", "user_id": "876123654", "language_code": "ru"}'
+```
+
+Ответ
+```
+message              status
+-------              ------
+Subscription renewed confirmed
 ```
 
